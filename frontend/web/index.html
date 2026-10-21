@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartWaste AI & DSS - Intelligent Waste Management Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">SmartWaste AI</h1>
+        <span class="brand-subtitle">Decision Support System (DSS) v2.0</span>
+      </div>
+    </div>
+
+    <div class="nav-metrics">
+      <div class="system-status-chip">
+        <span class="status-dot pulse"></span>
+        <span id="system-status-text">DSS Engine Online</span>
+      </div>
+      <button id="btn-simulate-tick" class="btn btn-secondary btn-sm">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        Simulate 1-Hr City Traffic
+      </button>
+      <a href="/mobile" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">
+        <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+          <line x1="12" y1="18" x2="12.01" y2="18"></line>
+        </svg>
+        📱 Mobile App Preview (عربي)
+      </a>
+      <button id="btn-empty-all" class="btn btn-outline btn-sm">Empty All Bins</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Live Alerts Banner -->
+    <div id="alerts-container" class="alerts-container hidden">
+      <div class="alert-icon">⚠️</div>
+      <div id="alerts-content" class="alerts-content"></div>
+    </div>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <div class="card kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Total Processed</span>
+          <span class="kpi-badge badge-blue">AI Sorter</span>
+        </div>
+        <div class="kpi-value" id="kpi-total-items">428</div>
+        <div class="kpi-trend text-muted">Items classified and rerouted</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Sorting Accuracy</span>
+          <span class="kpi-badge badge-green">Purity Rate</span>
+        </div>
+        <div class="kpi-value text-emerald" id="kpi-accuracy">97.9%</div>
+        <div class="kpi-trend text-muted">Contamination prevented by DSS</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Recycled Weight</span>
+          <span class="kpi-badge badge-amber">Payload</span>
+        </div>
+        <div class="kpi-value" id="kpi-weight">148.5 kg</div>
+        <div class="kpi-trend text-muted">Diverted from city landfills</div>
+      </div>
+
+      <div class="card kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">CO₂ Reduction</span>
+          <span class="kpi-badge badge-cyan">Offset</span>
+        </div>
+        <div class="kpi-value text-cyan" id="kpi-carbon">274.7 kg</div>
+        <div class="kpi-trend text-muted">Saved via optimal collection</div>
+      </div>
+    </section>
+
+    <!-- Interactive Classification & Real-Time DSS Engine -->
+    <section class="grid-2-col">
+      <!-- AI Classifier Panel -->
+      <div class="card visualizer-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">YOLOv8 Real-Time Waste Classifier</h2>
+            <p class="card-subtitle">Detects Metal, Plastic, Glass, & Paper with computer vision</p>
+          </div>
+          <span id="model-tag" class="tag tag-primary">YOLOv8 Active</span>
+        </div>
+
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*" class="file-input-hidden">
+          <div class="drop-zone-placeholder" id="drop-zone-placeholder">
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <p class="drop-prompt">Drop waste item image here, or <span class="highlight">browse</span></p>
+            <span class="drop-hint">Supports JPEG, PNG • Real-time detection & DSS sorting</span>
+          </div>
+          <img id="classified-image-preview" class="classified-image hidden" alt="Annotated Detection">
+        </div>
+
+        <!-- Quick Sample Presets -->
+        <div class="sample-picker">
+          <span class="sample-label">Quick Test Samples:</span>
+          <div class="sample-buttons">
+            <button class="btn-sample" data-sample="sample_metal.jpg" data-type="Metal">🥫 Metal Can</button>
+            <button class="btn-sample" data-sample="sample_plastic.jpg" data-type="Plastic">🧴 Plastic Bottle</button>
+            <button class="btn-sample" data-sample="sample_glass.jpg" data-type="Glass">🫙 Glass Jar</button>
+            <button class="btn-sample" data-sample="sample_paper.jpg" data-type="Paper">📦 Cardboard</button>
+          </div>
+        </div>
+
+        <!-- Detection Summary Bar -->
+        <div id="detection-details" class="detection-details-bar hidden">
+          <div class="detail-item">
+            <span class="detail-label">Detected Category</span>
+            <span class="detail-val badge-category" id="res-category">Plastic</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Confidence</span>
+            <span class="detail-val text-bold" id="res-confidence">96.4%</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Est. Volume</span>
+            <span class="detail-val" id="res-volume">0.65 L</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Inference Time</span>
+            <span class="detail-val" id="res-latency">14 ms</span>
+          </div>
+        </div>
+
+        <!-- Material Confidence Breakdown -->
+        <div id="material-breakdown-bar" class="material-breakdown-bar hidden">
+          <div class="mb-header">Material Confidence Probabilities:</div>
+          <div class="mb-grid" id="mb-grid"></div>
+        </div>
+      </div>
+
+      <!-- DSS Automated Decision Engine & Actuation Panel -->
+      <div class="card dss-card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 class="card-title">DSS Sorting Rules & Decision Logic</h2>
+            <p class="card-subtitle">Automated actuation rules, diversion gates, & purity safeguards</p>
+          </div>
+          <span class="tag tag-emerald" id="decision-status-tag">Ready</span>
+        </div>
+
+        <div id="dss-empty-state" class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="16" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          </svg>
+          <p>Awaiting waste item input...</p>
+          <span>Upload an image or pick a test sample above to inspect DSS automated sorting rules.</span>
+        </div>
+
+        <div id="dss-decision-container" class="dss-container hidden">
+          <div class="decision-header-box">
+            <div class="box-meta">
+              <span class="meta-label">Assigned Destination Bin</span>
+              <span class="meta-value" id="dec-bin-name">Plastics & Polymers Silo</span>
+              <span class="meta-sub" id="dec-bin-id">BIN-PLASTIC-01</span>
+            </div>
+            <div class="box-action">
+              <span class="meta-label">Actuation Gate</span>
+              <span class="action-badge" id="dec-gate-action">GATE_B_VACUUM</span>
+            </div>
+          </div>
+
+          <div class="dss-specs-grid">
+            <div class="spec-card">
+              <span class="spec-label">Mechanism</span>
+              <span class="spec-val" id="dec-mechanism">Delta Robotic Gripper</span>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Conveyor Velocity</span>
+              <span class="spec-val" id="dec-conveyor-speed">1.5 m/s</span>
+            </div>
+            <div class="spec-card">
+              <span class="spec-label">Purity Validation</span>
+              <span class="spec-val text-emerald" id="dec-purity">Verified (Confidence &gt; 60%)</span>
+            </div>
+          </div>
+
+          <div class="audit-trail-section">
+            <span class="audit-title">DSS Multi-Criteria Rule Reasoning:</span>
+            <ul id="dss-reasoning-list" class="reasoning-list"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Container Fill-Level Telemetry Section -->
+    <section class="section-container">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Smart City Containers & Fill-Level Telemetry</h2>
+          <p class="section-subtitle">Real-time ultrasonic fill sensors, volume capacity, and threshold alerts</p>
+        </div>
+        <div class="legend-group">
+          <span class="legend-item"><span class="legend-dot normal"></span> Normal (&lt;75%)</span>
+          <span class="legend-item"><span class="legend-dot warning"></span> Warning (75-89%)</span>
+          <span class="legend-item"><span class="legend-dot critical"></span> Critical (≥90%)</span>
+        </div>
+      </div>
+
+      <div class="containers-grid" id="containers-grid">
+        <!-- Dynamically populated via JS -->
+      </div>
+    </section>
+
+    <!-- DSS Route Optimization & Logistics Section -->
+    <section class="section-container">
+      <div class="card route-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">DSS Dynamic Route Optimization (TSP Logistics)</h2>
+            <p class="card-subtitle">Calculates optimal shortest path for collection trucks servicing critical/warning containers</p>
+          </div>
+          <button id="btn-optimize-route" class="btn btn-primary">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Compute Optimal Route
+          </button>
+        </div>
+
+        <div class="route-analytics-bar" id="route-analytics-bar">
+          <div class="route-stat">
+            <span class="stat-label">Stops Scheduled</span>
+            <span class="stat-val" id="route-stops-count">-</span>
+          </div>
+          <div class="route-stat">
+            <span class="stat-label">Total Mileage</span>
+            <span class="stat-val" id="route-distance">-</span>
+          </div>
+          <div class="route-stat">
+            <span class="stat-label">Estimated Time</span>
+            <span class="stat-val" id="route-time">-</span>
+          </div>
+          <div class="route-stat">
+            <span class="stat-label">Volume to Collect</span>
+            <span class="stat-val" id="route-volume">-</span>
+          </div>
+          <div class="route-stat">
+            <span class="stat-label">Fuel Saved</span>
+            <span class="stat-val text-emerald" id="route-fuel">-</span>
+          </div>
+          <div class="route-stat">
+            <span class="stat-label">CO₂ Averted</span>
+            <span class="stat-val text-cyan" id="route-co2">-</span>
+          </div>
+        </div>
+
+        <div class="waypoints-timeline" id="waypoints-timeline">
+          <p class="text-muted" style="padding: 1.5rem; text-align: center;">Click "Compute Optimal Route" to dispatch collection schedule.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Smart Waste AI &amp; Decision Support System • Powered by FastAPI, YOLOv8 Vision, and Heuristic Route Analytics</p>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

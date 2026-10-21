@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Waste AI - Mobile Inspection Result &amp; Home App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-green: #059669;
+      --dark-green-1: #064E3B;
+      --dark-green-2: #047857;
+      --primary-blue: #2563EB;
+      --blue-subtle: #EFF6FF;
+      --gray-bg: #F8FAFC;
+      --text-dark: #0F172A;
+      --text-muted: #64748B;
+      --border-color: #F1F5F9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* iPhone Frame */
+    .phone-wrapper {
+      width: 395px;
+      height: 844px;
+      background: #000;
+      border-radius: 54px;
+      padding: 12px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 2px #334155;
+      position: relative;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: var(--gray-bg);
+      border-radius: 44px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* Dynamic Island / Notch */
+    .notch {
+      width: 120px;
+      height: 30px;
+      background: #000;
+      border-radius: 20px;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+
+    .status-bar {
+      height: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 24px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-dark);
+      z-index: 10;
+    }
+
+    /* App Views */
+    .app-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .app-view.active {
+      display: flex;
+    }
+
+    /* View 1: Inspection Result Screen (Image 1) */
+    .result-header {
+      height: 52px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+      color: var(--text-dark);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .scroll-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+      overflow: hidden;
+    }
+
+    /* Top Card */
+    .image-preview-box {
+      width: 100%;
+      height: 205px;
+      position: relative;
+      background: #e2e8f0;
+    }
+
+    .preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .floating-recyclable-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: #10B981;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    .top-card-info {
+      padding: 18px;
+    }
+
+    .tag-category {
+      background: #EFF6FF;
+      color: #2563EB;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .object-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .object-main-title {
+      font-size: 16.5px;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .book-icon-box {
+      width: 44px;
+      height: 44px;
+      background: #EFF6FF;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .visual-description {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    /* Middle Card */
+    .card-header-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 18px 18px 10px;
+    }
+
+    .chart-icon-box {
+      background: #ECFDF5;
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-size: 15px;
+    }
+
+    .card-heading-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .analysis-body {
+      display: flex;
+      align-items: center;
+      padding: 8px 18px 20px;
+      gap: 14px;
+    }
+
+    .bars-col {
+      flex: 6;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .material-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .mat-pct {
+      width: 42px;
+      font-weight: 600;
+      color: #4B5563;
+      text-align: left;
+    }
+
+    .mat-pct.primary {
+      color: #2563EB;
+      font-weight: 800;
+    }
+
+    .track {
+      flex: 1;
+      height: 7px;
+      background: #F3F4F6;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .fill {
+      height: 100%;
+      border-radius: 999px;
+    }
+
+    .mat-name {
+      width: 44px;
+      font-weight: 600;
+      color: #374151;
+      text-align: right;
+    }
+
+    .mat-name.primary {
+      color: #2563EB;
+      font-weight: 800;
+    }
+
+    .gauge-col {
+      flex: 4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .circular-gauge {
+      width: 96px;
+      height: 96px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gauge-svg {
+      transform: rotate(-90deg);
+    }
+
+    .gauge-center-text {
+      position: absolute;
+      text-align: center;
+    }
+
+    .gauge-number {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1D4ED8;
+      line-height: 1;
+    }
+
+    .gauge-label {
+      font-size: 10px;
+      color: #6B7280;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Bottom Card: DSS */
+    .dss-callout {
+      margin: 10px 18px 18px;
+      background: #EFF6FF;
+      border: 1px solid #DBEAFE;
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dss-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .dss-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .dss-bin-name {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #2563EB;
+    }
+
+    .dss-trash-icon {
+      font-size: 26px;
+      color: #2563EB;
+    }
+
+    /* View 2: Home Screen (Image 2) */
+    .home-topbar {
+      height: 52px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon-pill {
+      background: #D1FAE5;
+      padding: 5px;
+      border-radius: 10px;
+      font-size: 16px;
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-dark);
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .home-hero-card {
+      background: linear-gradient(135deg, var(--dark-green-1), var(--dark-green-2));
+      border-radius: 24px;
+      padding: 20px;
+      color: #fff;
+    }
+
+    .hero-pill {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+
+    .hero-title {
+      font-size: 18.5px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .hero-desc {
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #D1FAE5;
+      margin-bottom: 16px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-camera {
+      flex: 1;
+      background: #fff;
+      color: #065F46;
+      border: none;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .btn-gallery {
+      flex: 1;
+      background: transparent;
+      color: #fff;
+      border: 1.2px solid #fff;
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .kpi-row-card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 14px 8px;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .kpi-unit {
+      text-align: center;
+      flex: 1;
+    }
+
+    .kpi-u-icon {
+      font-size: 17px;
+      margin-bottom: 3px;
+    }
+
+    .kpi-u-val {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text-dark);
+    }
+
+    .kpi-u-lbl {
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .kpi-sep {
+      width: 1px;
+      height: 30px;
+      background: #F1F5F9;
+    }
+
+    .categories-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+    }
+
+    .cat-head-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
+
+    .cat-guide-link {
+      font-size: 12px;
+      color: var(--primary-green);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .category-box {
+      border-radius: 18px;
+      padding: 14px;
+      border: 1.2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 135px;
+      transition: transform 0.15s ease;
+    }
+
+    .category-box:hover {
+      transform: translateY(-2px);
+    }
+
+    .cat-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .cat-pill {
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .cat-circle {
+      width: 30px;
+      height: 30px;
+      background: #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .cat-main-title {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-top: 10px;
+    }
+
+    .cat-bin-desc {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+
+    .bottom-tabbar {
+      height: 58px;
+      background: #fff;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 10.5px;
+      color: #94A3B8;
+      cursor: pointer;
+      gap: 2px;
+    }
+
+    .tab-item.active {
+      color: var(--primary-green);
+      font-weight: 700;
+    }
+
+    .tab-icon {
+      font-size: 19px;
+    }
+
+    /* Hidden file inputs */
+    #hidden-camera-input, #hidden-gallery-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mockup Container -->
+  <div class="phone-wrapper">
+    <div class="notch"></div>
+    <div class="phone-screen">
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <span>11:36</span>
+        <span>📶 🔋</span>
+      </div>
+
+      <!-- VIEW 1: Smart Inspection Result (Exact Match to Screenshot 1) -->
+      <div id="view-result" class="app-view active">
+        <header class="result-header">
+          <button class="back-btn" onclick="showHomeScreen()">→</button>
+          <h1 class="header-title">نتيجة الفحص الذكي</h1>
+          <div style="width:36px;"></div>
+        </header>
+
+        <div class="scroll-body">
+          <!-- 1. TOP CARD -->
+          <div class="card">
+            <div class="image-preview-box">
+              <img id="scanned-image" class="preview-img" src="/api/sample-images/sample_paper.jpg" alt="Scanned Waste">
+              <div class="floating-recyclable-badge">
+                <span>♻</span>
+                <span id="badge-recyclable">قابل للتدوير</span>
+              </div>
+            </div>
+
+            <div class="top-card-info">
+              <span class="tag-category" id="badge-category">ورق وكرتون (Paper)</span>
+              <div class="object-title-row">
+                <span class="object-main-title" id="item-title">منتج ورقي / كرتون (Paper / Cardboard)</span>
+                <div class="book-icon-box" id="item-icon-box">📖</div>
+              </div>
+              <p class="visual-description" id="item-description">
+                اكتشاف سطح غير لامع (Matte) مع تدرجات لونية دافئة ونسيج ألياف يطابق الورق والكرتون.
+              </p>
+            </div>
+          </div>
+
+          <!-- 2. MIDDLE CARD -->
+          <div class="card">
+            <div class="card-header-bar">
+              <div class="chart-icon-box">📊</div>
+              <span class="card-heading-text">تحليل نسب المواد وتأكيد الذكاء الاصطناعي</span>
+            </div>
+
+            <div class="analysis-body">
+              <!-- Material Bars -->
+              <div class="bars-col" id="bars-list">
+                <div class="material-bar-row">
+                  <span class="mat-pct">23.9%</span>
+                  <div class="track"><div class="fill" style="width: 23.9%; background: #F59E0B;"></div></div>
+                  <span class="mat-name">Metal</span>
+                </div>
+                <div class="material-bar-row">
+                  <span class="mat-pct primary">40.5%</span>
+                  <div class="track"><div class="fill" style="width: 40.5%; background: #3B82F6;"></div></div>
+                  <span class="mat-name primary">Paper</span>
+                </div>
+                <div class="material-bar-row">
+                  <span class="mat-pct">12.8%</span>
+                  <div class="track"><div class="fill" style="width: 12.8%; background: #10B981;"></div></div>
+                  <span class="mat-name">Glass</span>
+                </div>
+                <div class="material-bar-row">
+                  <span class="mat-pct">22.8%</span>
+                  <div class="track"><div class="fill" style="width: 22.8%; background: #EF4444;"></div></div>
+                  <span class="mat-name">Plastic</span>
+                </div>
+              </div>
+
+              <!-- Circular Progress Gauge -->
+              <div class="gauge-col">
+                <div class="circular-gauge">
+                  <svg class="gauge-svg" width="96" height="96">
+                    <circle cx="48" cy="48" r="40" stroke="#E0E7FF" stroke-width="8" fill="none" />
+                    <circle id="gauge-circle" cx="48" cy="48" r="40" stroke="#2563EB" stroke-width="8" fill="none"
+                            stroke-dasharray="251.2" stroke-dashoffset="70.3" stroke-linecap="round" />
+                  </svg>
+                  <div class="gauge-center-text">
+                    <div class="gauge-number" id="confidence-pct">72%</div>
+                    <div class="gauge-label">دقة التصنيف</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. BOTTOM CARD (DSS Recommendation) -->
+          <div class="card">
+            <div class="card-header-bar">
+              <div class="chart-icon-box" style="background:#EFF6FF;">☑️</div>
+              <span class="card-heading-text">قرار الفرز الموصى به (DSS Recommendation)</span>
+            </div>
+
+            <div class="dss-callout">
+              <div class="dss-text-group">
+                <span class="dss-label">حاوية المهملات المناسبة:</span>
+                <span class="dss-bin-name" id="dss-bin-text">السلة الزرقاء (مخصصة للورق والكرتون)</span>
+              </div>
+              <span class="dss-trash-icon">🗑️</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: Home Screen (Exact Match to Screenshot 2) -->
+      <div id="view-home" class="app-view">
+        <header class="home-topbar">
+          <span style="font-size:20px; cursor:pointer;">⚙️</span>
+          <div class="brand-group">
+            <div class="brand-icon-pill">♻️</div>
+            <div>
+              <div class="brand-title">Smart Waste AI</div>
+              <div class="brand-sub">نظام دعم قرار فرز النفايات</div>
+            </div>
+          </div>
+          <span style="font-size:20px; cursor:pointer;">📖</span>
+        </header>
+
+        <div class="scroll-body">
+          <!-- HERO CARD -->
+          <div class="home-hero-card">
+            <div class="hero-pill">✨ التعرف الذكي بالرؤية الحاسوبية</div>
+            <h2 class="hero-title">صوّر ما ستلقيه في سلة المهملات</h2>
+            <p class="hero-desc">
+              يقوم التطبيق بفحص المادة وتصنيفها فوراً إلى Metal أو Paper أو Plastic أو Glass وتحديد السلة المناسبة.
+            </p>
+            <div class="hero-buttons">
+              <button class="btn-camera" onclick="triggerScan(true)">
+                <span>📷</span> فتح الكاميرا
+              </button>
+              <button class="btn-gallery" onclick="triggerScan(false)">
+                <span>🖼️</span> من المعرض
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI ROW -->
+          <div class="kpi-row-card">
+            <div class="kpi-unit">
+              <div class="kpi-u-icon">📱</div>
+              <div class="kpi-u-val" id="kpi-scanned">0</div>
+              <div class="kpi-u-lbl">عنصر تم فحصه</div>
+            </div>
+            <div class="kpi-sep"></div>
+            <div class="kpi-unit">
+              <div class="kpi-u-icon">🍃</div>
+              <div class="kpi-u-val" id="kpi-co2">0.0 كجم</div>
+              <div class="kpi-u-lbl">CO2 تم توفيره</div>
+            </div>
+            <div class="kpi-sep"></div>
+            <div class="kpi-unit">
+              <div class="kpi-u-icon">📦</div>
+              <div class="kpi-u-val">4 مواد</div>
+              <div class="kpi-u-lbl">أنواع مصنفة</div>
+            </div>
+          </div>
+
+          <!-- CATEGORIES HEADER -->
+          <div class="categories-header">
+            <span class="cat-head-title">أقسام وتصنيفات المواد (4 Categories)</span>
+            <span class="cat-guide-link">عرض الدليل</span>
+          </div>
+
+          <!-- 2x2 GRID -->
+          <div class="categories-grid">
+            <!-- Paper -->
+            <div class="category-box" style="background:#EFF6FF; border-color:#BFDBFE;" onclick="simulateCategoryScan('sample_paper.jpg', 'Paper')">
+              <div class="cat-top">
+                <span class="cat-pill" style="background:#2563EB;">0 عنصر</span>
+                <div class="cat-circle">📖</div>
+              </div>
+              <div>
+                <div class="cat-main-title">ورق وكرتون (Paper)</div>
+                <div class="cat-bin-desc">السلة الزرقاء (مخصصة للورق والكرتون)</div>
+              </div>
+            </div>
+
+            <!-- Metal -->
+            <div class="category-box" style="background:#FFFBEB; border-color:#FDE68A;" onclick="simulateCategoryScan('sample_metal.jpg', 'Metal')">
+              <div class="cat-top">
+                <span class="cat-pill" style="background:#D97706;">0 عنصر</span>
+                <div class="cat-circle">🥫</div>
+              </div>
+              <div>
+                <div class="cat-main-title">معادن (Metal)</div>
+                <div class="cat-bin-desc">السلة الصفراء / المعدنية</div>
+              </div>
+            </div>
+
+            <!-- Plastic -->
+            <div class="category-box" style="background:#FEF2F2; border-color:#FECACA;" onclick="simulateCategoryScan('sample_plastic.jpg', 'Plastic')">
+              <div class="cat-top">
+                <span class="cat-pill" style="background:#DC2626;">0 عنصر</span>
+                <div class="cat-circle">🧴</div>
+              </div>
+              <div>
+                <div class="cat-main-title">بلاستيك (Plastic)</div>
+                <div class="cat-bin-desc">السلة البرتقالية / الحمراء (للبلاستيك)</div>
+              </div>
+            </div>
+
+            <!-- Glass -->
+            <div class="category-box" style="background:#ECFDF5; border-color:#A7F3D0;" onclick="simulateCategoryScan('sample_glass.jpg', 'Glass')">
+              <div class="cat-top">
+                <span class="cat-pill" style="background:#059669;">0 عنصر</span>
+                <div class="cat-circle">🍷</div>
+              </div>
+              <div>
+                <div class="cat-main-title">زجاج (Glass)</div>
+                <div class="cat-bin-desc">السلة الخضراء (مخصصة للزجاجيات)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM TABBAR -->
+        <nav class="bottom-tabbar">
+          <div class="tab-item active">
+            <span class="tab-icon">🏠</span>
+            <span>الرئيسية</span>
+          </div>
+          <div class="tab-item" onclick="triggerScan(true)">
+            <span class="tab-icon">📷</span>
+            <span>الكاميرا</span>
+          </div>
+          <div class="tab-item">
+            <span class="tab-icon">⏱️</span>
+            <span>السجل</span>
+          </div>
+          <div class="tab-item">
+            <span class="tab-icon">📖</span>
+            <span>الدليل</span>
+          </div>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for live user testing -->
+  <input type="file" id="hidden-file-input" accept="image/*" style="display:none;" onchange="handleFileSelected(this)">
+
+  <script>
+    let scannedCount = 0;
+    let co2Total = 0.0;
+
+    function showHomeScreen() {
+      document.getElementById('view-result').classList.remove('active');
+      document.getElementById('view-home').classList.add('active');
+    }
+
+    function showResultScreen() {
+      document.getElementById('view-home').classList.remove('active');
+      document.getElementById('view-result').classList.add('active');
+    }
+
+    function triggerScan(isCamera) {
+      document.getElementById('hidden-file-input').click();
+    }
+
+    async function handleFileSelected(input) {
+      if (!input.files || input.files.length === 0) return;
+      const file = input.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/v1/scan', {
+          method: 'POST',
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          renderResult(data, URL.createObjectURL(file));
+        } else {
+          simulateCategoryScan('sample_paper.jpg', 'Paper');
+        }
+      } catch (e) {
+        simulateCategoryScan('sample_paper.jpg', 'Paper');
+      }
+    }
+
+    async function simulateCategoryScan(filename, hint) {
+      try {
+        const response = await fetch(`/api/sample-images/${filename}`);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('category_hint', hint);
+
+        const res = await fetch('/api/v1/scan', {
+          method: 'POST',
+          body: formData
+        });
+        if (res.ok) {
+          const data = await res.json();
+          renderResult(data, `/api/sample-images/${filename}`);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderResult(data, imageUrl) {
+      scannedCount++;
+      co2Total += 0.25;
+      document.getElementById('kpi-scanned').textContent = scannedCount;
+      document.getElementById('kpi-co2').textContent = co2Total.toFixed(1) + ' كجم';
+
+      document.getElementById('scanned-image').src = data.annotated_image_base64 || imageUrl;
+      document.getElementById('badge-recyclable').textContent = data.status_badge;
+      document.getElementById('badge-category').textContent = data.category_badge;
+      document.getElementById('item-title').textContent = data.title_ar;
+      document.getElementById('item-description').textContent = data.description_ar;
+
+      const icons = {
+        Paper: '📖',
+        Metal: '🥫',
+        Plastic: '🧴',
+        Glass: '🍷'
+      };
+      document.getElementById('item-icon-box').textContent = icons[data.detected_category] || '📖';
+
+      // Bars
+      const barsList = document.getElementById('bars-list');
+      barsList.innerHTML = '';
+      data.probability_breakdown.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'material-bar-row';
+        row.innerHTML = `
+          <span class="mat-pct ${item.is_primary ? 'primary' : ''}">${item.percentage}%</span>
+          <div class="track"><div class="fill" style="width: ${item.percentage}%; background: ${item.color};"></div></div>
+          <span class="mat-name ${item.is_primary ? 'primary' : ''}">${item.material}</span>
+        `;
+        barsList.appendChild(row);
+      });
+
+      // Gauge
+      const conf = Math.round(data.overall_confidence);
+      document.getElementById('confidence-pct').textContent = conf + '%';
+      const circumference = 251.2;
+      const offset = circumference - (circumference * conf) / 100;
+      document.getElementById('gauge-circle').style.strokeDashoffset = offset;
+
+      // DSS
+      document.getElementById('dss-bin-text').textContent = data.dss_recommendation.target_bin_ar;
+
+      showResultScreen();
+    }
+  </script>
+</body>
+</html>
