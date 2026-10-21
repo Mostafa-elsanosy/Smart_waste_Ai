@@ -235,7 +235,7 @@ class ResultScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               const Text(
-                'تحليل نسب المواد وتأكيد الذكاء الاصطناعي',
+                'درجات تطابق المواد',
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w700,

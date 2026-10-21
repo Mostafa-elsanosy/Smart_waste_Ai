@@ -236,14 +236,7 @@ class SmartWasteService:
         )
 
         primary_cat = det_result.primary_category
-        if category_hint and category_hint in ["Metal", "Plastic", "Glass", "Paper"]:
-            primary_cat = category_hint
-
-        # Calculate confidence from feature breakdown
-        if det_result.probabilities and primary_cat in det_result.probabilities:
-            confidence_pct = round(det_result.probabilities[primary_cat], 1)
-        else:
-            confidence_pct = round(det_result.confidence_avg * 100.0, 1)
+        confidence_pct = round(det_result.confidence_avg * 100.0, 1)
 
         # Evaluate DSS mobile response with extracted probabilities
         mobile_result = self.sorting_engine.evaluate_mobile_scan(
@@ -257,7 +250,8 @@ class SmartWasteService:
 
         # Update stats
         self.total_processed_items += 1
-        self.category_counts[primary_cat] = self.category_counts.get(primary_cat, 0) + 1
+        if primary_cat in settings.CATEGORIES:
+            self.category_counts[primary_cat] = self.category_counts.get(primary_cat, 0) + 1
         self.total_weight_kg += 0.25
         self.total_volume_liters += 0.55
 

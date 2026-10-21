@@ -36,26 +36,41 @@ CLASS_HEX_COLORS = {
     "Contaminated": "#F44336"
 }
 
-# Strict Material Class Mappings from YOLO Classifications
-METAL_CLASSES = {
-    "metal", "can", "aluminium foil", "aluminum foil", "pop tab", "battery",
-    "scissors", "scissor", "clipper", "nail clipper", "knife", "fork", "spoon",
-    "toaster", "microwave", "sink", "oven", "pliers", "hardware", "tin"
+# ============================================================================
+# Exhaustive Authoritative Material Mapping Tables
+# Every YOLO class from all 3 models is mapped ONCE to exactly ONE material.
+# Classes whose material depends on visual appearance are in AMBIGUOUS_CLASSES.
+# ============================================================================
+
+# Tier-1: Shape alone is sufficient — material is 100% certain
+AUTHORITATIVE_METAL = {
+    "can", "aluminium foil", "aluminum foil", "pop tab",
+    "scissors", "scissor", "clipper", "nail clipper",
+    "knife", "fork", "spoon", "toaster", "microwave", "sink", "oven",
+    "pliers", "hardware", "tin", "metal",
 }
 
-GLASS_CLASSES = {
-    "broken glass", "brown-glass", "green-glass", "white-glass", "glass",
-    "wine glass", "vase", "perfume", "perfume bottle", "jar", "glass jar"
+AUTHORITATIVE_GLASS = {
+    "broken glass", "brown-glass", "green-glass", "white-glass",
+    "wine glass", "vase", "perfume", "perfume bottle", "glass jar",
+    "glass",
 }
 
-PAPER_CLASSES = {
-    "cardboard", "carton", "paper", "book", "newspaper", "magazine"
+AUTHORITATIVE_PAPER = {
+    "cardboard", "carton", "paper", "book", "newspaper", "magazine",
 }
 
-PLASTIC_CLASSES = {
-    "plastic", "plastic container", "plastic bag - wrapper", "plastic bag",
-    "straw", "styrofoam piece", "styrofoam", "other plastic", "bottle cap",
-    "cup", "trash", "other litter"
+AUTHORITATIVE_PLASTIC = {
+    "plastic bag - wrapper", "plastic bag", "plastic container",
+    "straw", "styrofoam piece", "styrofoam",
+    "bottle cap", "lid",
+}
+
+# Tier-2: Shape is ambiguous — surface optics decide the material
+AMBIGUOUS_CLASSES = {
+    "bottle", "cup", "jar", "battery", "trash", "other litter",
+    "unlabeled litter", "cigarette", "bowl", "toothbrush",
+    "cell phone", "biological", "clothes", "shoes",
 }
 
 IGNORED_COCO_CLASSES = {
@@ -68,7 +83,7 @@ IGNORED_COCO_CLASSES = {
     "kite", "baseball bat", "baseball glove", "skateboard", "surfboard",
     "tennis racket", "banana", "apple", "sandwich", "orange", "broccoli",
     "carrot", "hot dog", "pizza", "donut", "cake", "refrigerator", "clock",
-    "teddy bear", "hair drier"
+    "teddy bear", "hair drier",
 }
 
 @dataclass
@@ -140,7 +155,7 @@ class WasteYOLODetector:
         self.coco_model = None
         self.waste12_model = None
         self.engine_name = "Ultralytics-YOLOv8"
-        self._cache: Dict[Tuple[str, Optional[str], Optional[str]], DetectionResult] = {}
+        self._cache: Dict[Tuple[str, Optional[str]], DetectionResult] = {}
         self._max_cache_size: int = 64
         
         # Configure torch thread efficiency for CPU
@@ -250,62 +265,118 @@ class WasteYOLODetector:
 
     def _classify_detected_label(self, raw_label: str, image_crop: Optional[Image.Image] = None) -> Tuple[str, float]:
         """
-        Maps raw YOLO detected class string into one of 4 canonical waste categories
-        using multi-spectral visual crop verification for ambiguous items.
+        Two-tier hierarchical material classification:
+        Tier 1 — Authoritative YOLO labels whose shape alone determines material (can, scissors, cardboard, etc.)
+        Tier 2 — Ambiguous YOLO labels (bottle, cup, battery, trash) resolved by multi-spectral surface optics.
         """
         raw_lower = raw_label.lower().strip() if raw_label else "unknown"
 
-        # 1. High-accuracy multi-spectral optical evaluation on crop
+        # ──────────────── TIER 1: Authoritative Shape → Material ────────────────
+        if raw_lower in AUTHORITATIVE_METAL:
+            return "Metal", 0.985
+        if raw_lower in AUTHORITATIVE_GLASS:
+            return "Glass", 0.985
+        if raw_lower in AUTHORITATIVE_PAPER:
+            return "Paper", 0.985
+        if raw_lower in AUTHORITATIVE_PLASTIC:
+            return "Plastic", 0.98
+
+        if raw_lower in {"plastic", "other plastic"} and image_crop is not None:
+            return self._classify_detected_label("unknown", image_crop)
+
+        # ──────────────── TIER 2: Ambiguous Shape → Optical Tiebreak ────────────
+        # Extract surface optical features from the bounding-box crop
+        r, g, b, sat, spec_ratio, chroma = 128.0, 128.0, 128.0, 30.0, 0.0, 15.0
+        has_optics = False
+
         if image_crop is not None:
             try:
                 crop_np = np.array(image_crop.convert("RGB"))
-                if crop_np.size > 0:
+                if crop_np.size > 0 and crop_np.shape[0] > 2 and crop_np.shape[1] > 2:
                     r = float(np.mean(crop_np[:, :, 0]))
                     g = float(np.mean(crop_np[:, :, 1]))
                     b = float(np.mean(crop_np[:, :, 2]))
 
                     hsv = cv2.cvtColor(crop_np, cv2.COLOR_RGB2HSV)
                     sat = float(np.mean(hsv[:, :, 1]))
-                    val = float(np.mean(hsv[:, :, 2]))
                     spec_mask = (hsv[:, :, 2] > 230) & (hsv[:, :, 1] < 45)
-                    spec_ratio = float(np.sum(spec_mask)) / (crop_np.shape[0] * crop_np.shape[1])
+                    spec_ratio = float(np.sum(spec_mask)) / max(1, crop_np.shape[0] * crop_np.shape[1])
 
-                    diff_rg = abs(r - g)
-                    diff_gb = abs(g - b)
-                    diff_rb = abs(r - b)
-                    chroma = (diff_rg + diff_gb + diff_rb) / 3.0
-
-                    # A. Glass (Green Soda-Lime or Amber / Brown Glass or explicit glass label):
-                    is_green_glass = (g >= r + 3.0) and (g >= b - 2.0)
-                    is_amber_glass = (r > g + 10.0) and (g > b + 10.0) and (spec_ratio > 0.05 or any(k in raw_lower for k in ["bottle", "glass", "jar", "wine"]))
-                    if is_green_glass or is_amber_glass or any(g_cls in raw_lower for g in ["brown-glass", "green-glass", "white-glass", "broken glass", "wine glass", "vase"] if (g_cls := g)):
-                        return "Glass", 0.98
-
-                    # B. Paper & Cardboard (Warm wood-fiber cellulose with low specular matte surface):
-                    is_paper_warmth = (r > g + 6.0) and (g > b + 8.0) and (spec_ratio < 0.06)
-                    if is_paper_warmth or any(pa in raw_lower for pa in ["cardboard", "carton", "newspaper", "book", "magazine", "paper"]):
-                        return "Paper", 0.98
-
-                    # C. Neutral Metallic Surface (Silver, Chrome, Aluminum, Tin, Cutlery, Can):
-                    if (chroma < 11.0 and sat < 28.0) or any(m in raw_lower for m in ["aluminium foil", "aluminum foil", "pop tab", "scissor", "clipper", "knife", "fork", "spoon", "can", "metal", "battery", "tin"]):
-                        return "Metal", 0.97
-
-                    # D. Plastic (PET bottles, colored containers):
-                    is_plastic_blue = (b > g) and (b >= r + 3.0)
-                    is_synthetic_plastic = (sat > 35.0) and not is_amber_glass
-                    if is_plastic_blue or is_synthetic_plastic or any(p in raw_lower for p in ["plastic", "wrapper", "straw", "styrofoam", "bottle cap", "bottle", "cup"]):
-                        return "Plastic", 0.96
+                    chroma = (abs(r - g) + abs(g - b) + abs(r - b)) / 3.0
+                    has_optics = True
             except Exception:
                 pass
 
-        # 2. Canonical Keyword Fallback
-        if any(g in raw_lower for g in ["glass", "jar", "wine", "brown-glass", "green-glass", "white-glass"]):
+        # Helper booleans for optical surface patterns
+        is_green_glass = (g >= r + 2.5) and (g >= b - 2.0)          # Soda-lime green refraction
+        is_amber_glass = (r > g + 10.0) and (g > b + 10.0) and (spec_ratio > 0.04)  # Brown bottle
+        is_paper_warmth = (r > g + 5.0) and (g > b + 7.0) and (spec_ratio < 0.06)   # Cellulose matte
+        is_plastic_blue = (b > g) and (b >= r + 3.0)                # PET blue tint
+        is_neutral_metal = (chroma < 10.0) and (sat < 26.0)         # Achromatic gray
+
+        # ── "bottle" / "jar" — could be glass or plastic ──
+        if "bottle" in raw_lower or "jar" in raw_lower:
+            if is_green_glass or is_amber_glass:
+                return "Glass", 0.97
+            if is_neutral_metal:
+                return "Metal", 0.96
+            return "Plastic", 0.97  # PET / plastic bottle default
+
+        # ── "cup" — could be paper (Starbucks), glass (tumbler), or plastic ──
+        if "cup" in raw_lower or "bowl" in raw_lower:
+            if is_paper_warmth:
+                return "Paper", 0.97
+            if is_green_glass or (spec_ratio > 0.25 and sat < 20.0):
+                return "Glass", 0.96
+            return "Plastic", 0.96
+
+        # ── "battery" — usually metal, but optical check for misclassified glass ──
+        if "battery" in raw_lower:
+            if has_optics and is_green_glass:
+                return "Glass", 0.97
+            return "Metal", 0.97
+
+        # ── "trash" / "other litter" / "unlabeled litter" — pure optical decision ──
+        if raw_lower in {"trash", "other litter", "unlabeled litter", "cigarette", "unknown"}:
+            if has_optics:
+                if is_green_glass or is_amber_glass:
+                    return "Glass", 0.95
+                if is_paper_warmth:
+                    return "Paper", 0.95
+                if is_neutral_metal:
+                    return "Metal", 0.95
+                if is_plastic_blue or sat > 35.0:
+                    return "Plastic", 0.95
+            return "Plastic", 0.90  # safest generic fallback
+
+        # ── Non-recyclable classes from waste12 model ──
+        if raw_lower in {"biological", "clothes", "shoes"}:
+            if has_optics and is_paper_warmth:
+                return "Paper", 0.90
+            return "Plastic", 0.88
+
+        # ──────────────── TIER 3: Keyword substring fallback ────────────────
+        if any(kw in raw_lower for kw in ["glass", "wine", "vase"]):
             return "Glass", 0.96
-        if any(pa in raw_lower for pa in ["paper", "cardboard", "box", "carton"]):
+        if any(kw in raw_lower for kw in ["paper", "card", "carton", "book"]):
             return "Paper", 0.96
-        if any(m in raw_lower for m in ["metal", "can", "battery", "foil"]):
+        if any(kw in raw_lower for kw in ["metal", "can", "foil", "scissor"]):
             return "Metal", 0.96
-        return "Plastic", 0.94
+        if raw_lower != "other plastic" and any(kw in raw_lower for kw in ["plastic", "straw", "styro"]):
+            return "Plastic", 0.95
+
+        # ──────────────── FINAL: Pure optical classification ────────────────
+        if has_optics:
+            if is_green_glass or is_amber_glass:
+                return "Glass", 0.94
+            if is_paper_warmth:
+                return "Paper", 0.94
+            if is_neutral_metal:
+                return "Metal", 0.94
+            if is_plastic_blue or sat > 35.0:
+                return "Plastic", 0.93
+
+        return "Plastic", 0.88
 
     @staticmethod
     def _calculate_iou(b1: Dict[str, Any], b2: Dict[str, Any]) -> float:
@@ -342,7 +413,7 @@ class WasteYOLODetector:
         # 0. Fast LRU Cache lookup
         cache_key = None
         try:
-            cache_key = (hashlib.md5(enhanced_image.tobytes()).hexdigest(), requested_hint, source)
+            cache_key = (hashlib.md5(enhanced_image.tobytes()).hexdigest(), source)
             if cache_key in self._cache:
                 cached = self._cache[cache_key]
                 return DetectionResult(
@@ -405,8 +476,10 @@ class WasteYOLODetector:
                         if (xmax - xmin) > 10 and (ymax - ymin) > 10:
                             crop = enhanced_image.crop((max(0, xmin), max(0, ymin), min(w, xmax), min(h, ymax)))
 
-                        waste_type, mapped_conf = self._classify_detected_label(cls_name, crop)
-                        final_conf = max(conf, mapped_conf if conf > 0.25 else conf)
+                        waste_type, _ = self._classify_detected_label(cls_name, crop)
+                        final_conf = conf
+                        if cls_name in {"plastic", "other plastic"} and waste_type != "Plastic":
+                            final_conf = min(final_conf, 0.49)
 
                         # Spatial Reticle Prior for Live Camera:
                         # Prioritize objects positioned in the center viewfinder reticle
@@ -434,7 +507,7 @@ class WasteYOLODetector:
                 except Exception as e:
                     print(f"[!] Error running {m_type} YOLO inference: {e}")
 
-        # 3. Dual-Scale / Centered-Crop Inference if no high confidence detections
+        # 3. Retry on a centered crop using the same confidence threshold.
         if not candidates or max(c["confidence"] for c in candidates) < 0.40:
             crop_w, crop_h = int(w * 0.70), int(h * 0.70)
             cx1 = int((w - crop_w) / 2)
@@ -442,18 +515,19 @@ class WasteYOLODetector:
             center_crop = enhanced_image.crop((cx1, cy1, cx1 + crop_w, cy1 + crop_h))
 
             with inf_ctx:
-                for model, m_type, _ in [(self.waste12_model, "waste12", 0.08), (self.waste_model, "waste", 0.08)]:
+                for model, m_type, _ in [(self.waste12_model, "waste12", self.conf_threshold), (self.waste_model, "waste", self.conf_threshold)]:
                     if model is None:
                         continue
                     try:
-                        res_crop = model(center_crop, conf=0.08, verbose=False)[0]
+                        res_crop = model(center_crop, conf=self.conf_threshold, verbose=False)[0]
                         for b in res_crop.boxes:
                             cls_id = int(b.cls[0].item())
                             cls_name = model.names.get(cls_id, "").lower().strip()
                             conf = float(b.conf[0].item())
                             x1, y1, x2, y2 = map(int, b.xyxy[0].tolist())
                             sub_crop = center_crop.crop((max(0, x1), max(0, y1), min(crop_w, x2), min(crop_h, y2)))
-                            w_type, m_conf = self._classify_detected_label(cls_name, sub_crop)
+                            w_type, _ = self._classify_detected_label(cls_name, sub_crop)
+                            crop_conf = min(conf, 0.49) if cls_name in {"plastic", "other plastic"} and w_type != "Plastic" else conf
                             candidates.append({
                                 "xmin": cx1 + x1,
                                 "ymin": cy1 + y1,
@@ -461,7 +535,7 @@ class WasteYOLODetector:
                                 "ymax": cy1 + y2,
                                 "raw_class": cls_name,
                                 "waste_type": w_type,
-                                "confidence": round(max(conf, m_conf if conf > 0.20 else conf), 4),
+                                "confidence": round(crop_conf, 4),
                                 "box_area": (x2 - x1) * (y2 - y1),
                                 "source": f"{m_type}_crop",
                                 "center_dist": 0.1
@@ -469,26 +543,22 @@ class WasteYOLODetector:
                     except Exception:
                         pass
 
-        # 4. Final Fallback: Multi-Spectral Optical Evaluation of the central reticle zone
+        # 4. Send undetected images to inspection instead of guessing a material.
         if not candidates:
             center_w, center_h = int(w * 0.7), int(h * 0.7)
             xmin = int((w - center_w) / 2)
             ymin = int((h - center_h) / 2)
-            center_crop = enhanced_image.crop((xmin, ymin, xmin + center_w, ymin + center_h))
-            opt_cat, opt_conf = self._classify_detected_label("unknown", center_crop)
-            category = requested_hint if requested_hint in WASTE_CLASSES else opt_cat
-            final_conf = 0.96 if requested_hint in WASTE_CLASSES else opt_conf
             candidates.append({
                 "xmin": xmin, "ymin": ymin, "xmax": xmin + center_w, "ymax": ymin + center_h,
-                "raw_class": category.lower(),
-                "waste_type": category,
-                "confidence": round(final_conf, 4),
+                "raw_class": "unknown",
+                "waste_type": "Unknown",
+                "confidence": 0.0,
                 "box_area": center_w * center_h,
-                "source": "optical_prior",
+                "source": "inspection_fallback",
                 "center_dist": 0.0
             })
 
-        # 5. Multi-Model Consensus Agreement & IoU NMS
+        # 5. Merge overlapping model boxes without fabricating consensus confidence.
         candidates = sorted(candidates, key=lambda c: c["confidence"], reverse=True)
         deduped: List[Dict[str, Any]] = []
         for cand in candidates:
@@ -499,15 +569,20 @@ class WasteYOLODetector:
                     match = existing
                     break
             if match:
-                # If models agree on the waste type, boost consensus confidence
-                if match["waste_type"] == cand["waste_type"]:
-                    match["confidence"] = min(0.985, round(match["confidence"] * 1.05, 4))
                 continue
             deduped.append(cand)
         candidates = deduped
 
+        # Keep model scores independent; do not normalize a weak prediction to 100%.
+        category_scores = {category: 0.0 for category in WASTE_CLASSES}
+        for candidate in candidates:
+            category = candidate["waste_type"]
+            if category in category_scores:
+                category_scores[category] = max(category_scores[category], candidate["confidence"])
+        probabilities = {category: round(score * 100.0, 1) for category, score in category_scores.items()}
+
         final_boxes: List[BoundingBox] = []
-        for c in candidates[:4]:
+        for c in candidates[:1]:
             vol, weight = self._estimate_physical_properties(c["waste_type"], c["box_area"])
             final_boxes.append(BoundingBox(
                 xmin=c["xmin"],
@@ -522,36 +597,7 @@ class WasteYOLODetector:
             ))
 
         primary_cat = final_boxes[0].waste_type if final_boxes else "Plastic"
-        if requested_hint and requested_hint in WASTE_CLASSES:
-            primary_cat = requested_hint
-            final_boxes[0].waste_type = requested_hint
-
-        # 6. Build Calibrated 4-Material Probability Breakdown with Optical Proximity
-        primary_conf = final_boxes[0].confidence if final_boxes else 0.95
-        primary_pct = round(min(max(primary_conf * 100.0, 75.0), 98.0), 1)
-        remaining_pct = round(100.0 - primary_pct, 1)
-
-        # Optical Affinity Matrix across materials
-        affinities = {
-            "Metal":   {"Plastic": 0.45, "Glass": 0.35, "Paper": 0.20},
-            "Plastic": {"Glass": 0.50, "Metal": 0.30, "Paper": 0.20},
-            "Glass":   {"Plastic": 0.60, "Metal": 0.25, "Paper": 0.15},
-            "Paper":   {"Plastic": 0.50, "Metal": 0.30, "Glass": 0.20}
-        }
-        raw_sub = affinities.get(primary_cat, {"Plastic": 0.33, "Glass": 0.33, "Metal": 0.33, "Paper": 0.33})
-        sub_keys = [k for k in WASTE_CLASSES if k != primary_cat]
-        sub_weights = [raw_sub.get(k, 0.33) for k in sub_keys]
-        sum_w = sum(sub_weights)
-
-        probabilities = {}
-        for k, sw in zip(sub_keys, sub_weights):
-            probabilities[k] = round((sw / sum_w) * remaining_pct, 1)
-
-        probabilities[primary_cat] = primary_pct
-        diff = round(100.0 - sum(probabilities.values()), 1)
-        probabilities[primary_cat] = round(probabilities[primary_cat] + diff, 1)
-
-        conf_avg = round(float(final_boxes[0].confidence), 4) if final_boxes else 0.95
+        conf_avg = round(float(final_boxes[0].confidence), 4) if final_boxes else 0.0
         elapsed_ms = (time.time() - start_time) * 1000
 
         # Annotate image
@@ -571,7 +617,7 @@ class WasteYOLODetector:
             features_summary={
                 "detected_raw_classes": [b.raw_class for b in final_boxes],
                 "primary_material": primary_cat,
-                "confidence_percentage": primary_pct,
+                "confidence_percentage": round(conf_avg * 100.0, 1),
                 "source_optimized": source or "auto"
             }
         )

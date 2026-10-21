@@ -214,6 +214,17 @@ class SortingEngineDSS:
             "advice_ar": "ضع الزجاج برفق في السلة المخصصة لتجنب الكسر وحماية عمال النظافة.",
             "color": "#10B981",
             "base_prob": 12.8
+        },
+        "Unknown": {
+            "category_badge": "قيد المراجعة (Unknown)",
+            "title_ar": "تعذر تحديد نوع المادة",
+            "description_ar": "لم يكتشف النموذج مادة بثقة كافية. يرجى مراجعة الصورة أو تصنيف العنصر يدويًا.",
+            "target_bin_ar": "محطة الفحص اليدوي",
+            "bin_color_name": "Gray",
+            "bin_color_hex": "#6B7280",
+            "advice_ar": "لا تضع العنصر في حاوية إعادة التدوير قبل التحقق من نوعه.",
+            "color": "#6B7280",
+            "base_prob": 0.0
         }
     }
 
@@ -227,7 +238,7 @@ class SortingEngineDSS:
         Builds the exact localized payload required by the Smart Waste Mobile UI.
         Matches the Arabic specification and UI cards perfectly.
         """
-        cat_info = self.MOBILE_CONFIG.get(detected_category, self.MOBILE_CONFIG["Paper"])
+        cat_info = self.MOBILE_CONFIG.get(detected_category, self.MOBILE_CONFIG["Unknown"])
         
         # Build probability breakdown for candidate materials
         if custom_probabilities and len(custom_probabilities) == 4:
@@ -264,9 +275,9 @@ class SortingEngineDSS:
             "category_badge": cat_info["category_badge"],
             "title_ar": cat_info["title_ar"],
             "description_ar": cat_info["description_ar"],
-            "recyclable": True,
-            "status_badge": "قابل للتدوير",
-            "status_badge_color": "#10B981",
+            "recyclable": detected_category in self.DEFAULT_ROUTING_MAP,
+            "status_badge": "قيد المراجعة" if detected_category not in self.DEFAULT_ROUTING_MAP else "قابل للتدوير",
+            "status_badge_color": "#F59E0B" if detected_category not in self.DEFAULT_ROUTING_MAP else "#10B981",
             "overall_confidence": round(overall_confidence, 1),
             "probabilities": probs,
             "probability_breakdown": breakdown,
@@ -277,7 +288,7 @@ class SortingEngineDSS:
                 "bin_color_hex": cat_info["bin_color_hex"],
                 "icon": "trash-blue" if cat_info["bin_color_name"] == "Blue" else "trash",
                 "advice_ar": cat_info["advice_ar"],
-                "decision_status": "APPROVED"
+                "decision_status": "MANUAL_REVIEW" if detected_category not in self.DEFAULT_ROUTING_MAP else "APPROVED"
             }
         }
 

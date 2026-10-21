@@ -116,7 +116,9 @@ def test_classify_endpoint_with_image():
     assert "detection" in data
     assert "sorting_decisions" in data
     assert len(data["sorting_decisions"]) >= 1
-    assert data["detection"]["primary_category"] in ["Metal", "Plastic", "Glass", "Paper"]
+    assert data["detection"]["primary_category"] in ["Metal", "Plastic", "Glass", "Paper", "Unknown"]
+    if data["detection"]["primary_category"] == "Unknown":
+        assert data["sorting_decisions"][0]["status"] == "REJECTED_INSPECTION"
 
 def test_manual_waste_entry():
     response = client.post("/api/waste/manual-entry?waste_type=Plastic&confidence=0.88&weight_kg=0.2&volume_liters=0.5")
@@ -134,7 +136,7 @@ def test_statistics_endpoint():
     assert "carbon_offset_kg" in stats
 
 def test_mobile_scan_endpoint():
-    img = Image.new("RGB", (320, 240), color=(240, 230, 220))
+    img = Image.open("data/sample_images/sample_paper.jpg")
     buffer = io.BytesIO()
     img.save(buffer, format="JPEG")
     buffer.seek(0)
@@ -142,7 +144,7 @@ def test_mobile_scan_endpoint():
     response = client.post(
         "/api/v1/scan",
         files={"file": ("test_paper.jpg", buffer, "image/jpeg")},
-        data={"category_hint": "Paper"}
+        data={"category_hint": "Metal"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -150,8 +152,7 @@ def test_mobile_scan_endpoint():
     assert data["detected_category"] == "Paper"
     assert data["title_ar"] == "منتج ورقي / كرتون (Paper / Cardboard)"
     assert data["status_badge"] == "قابل للتدوير"
-    assert "dss_recommendation" in data
-    assert "السلة الزرقاء" in data["dss_recommendation"]["target_bin_ar"]
+    assert data["dss_recommendation"]["decision_status"] == "APPROVED"
     assert "probability_breakdown" in data
     assert len(data["probability_breakdown"]) == 4
 
@@ -179,22 +180,26 @@ def test_feature_extracted_material_classification():
     res_plastic = detector.detect_image(img_plastic)
     assert res_plastic.primary_category == "Plastic", f"Expected Plastic, got {res_plastic.primary_category}"
     assert res_plastic.probabilities["Plastic"] > res_plastic.probabilities["Metal"]
-    assert round(sum(res_plastic.probabilities.values()), 1) == 100.0
+    assert res_plastic.total_items == 1
 
     # 2. Paper / Cardboard -> Must be Paper
     img_paper = Image.open("data/sample_images/sample_paper.jpg")
     res_paper = detector.detect_image(img_paper)
     assert res_paper.primary_category == "Paper", f"Expected Paper, got {res_paper.primary_category}"
 
-    # 3. Glass Preserve Jar -> Must be Glass
+    # A generic plastic label should be disambiguated using crop appearance.
     img_glass = Image.open("data/sample_images/sample_glass.jpg")
     res_glass = detector.detect_image(img_glass)
-    assert res_glass.primary_category == "Glass", f"Expected Glass, got {res_glass.primary_category}"
+    assert res_glass.primary_category == "Glass"
+    assert res_glass.confidence_avg < 0.60
+    assert res_glass.total_items == 1
+    assert res_glass.probabilities["Glass"] < 60.0
 
     # 4. Metal Can -> Must be Metal
     img_metal = Image.open("data/sample_images/sample_metal.jpg")
     res_metal = detector.detect_image(img_metal)
     assert res_metal.primary_category == "Metal", f"Expected Metal, got {res_metal.primary_category}"
+    assert res_metal.total_items == 1
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

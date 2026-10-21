@@ -102,13 +102,12 @@ function setupSamplePicker() {
       sampleButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const filename = btn.getAttribute("data-sample");
-      const hint = btn.getAttribute("data-type");
       try {
         const response = await fetch(`/api/sample-images/${filename}`);
         if (!response.ok) throw new Error("Sample fetch failed");
         const blob = await response.blob();
         const file = new File([blob], filename, { type: "image/jpeg" });
-        uploadAndClassifyFile(file, hint);
+        uploadAndClassifyFile(file);
       } catch (err) {
         console.error("Failed to load sample image:", err);
       }
