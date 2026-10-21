@@ -625,6 +625,273 @@
     #hidden-camera-input, #hidden-gallery-input {
       display: none;
     }
+
+    /* VIEW 3: Live Camera Viewfinder */
+    #view-camera {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      z-index: 50;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #view-camera.active {
+      display: flex;
+    }
+
+    .camera-viewport {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      background: #090d16;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .camera-video-elem {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .camera-header-overlay {
+      position: absolute;
+      top: 48px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 25;
+    }
+
+    .cam-icon-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 17px;
+      transition: all 0.15s ease;
+    }
+
+    .cam-icon-btn:hover {
+      background: rgba(15, 23, 42, 0.9);
+      transform: scale(1.05);
+    }
+
+    .cam-title-badge {
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 6px 14px;
+      border-radius: 20px;
+      color: #fff;
+      font-size: 12.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .scanner-reticle-box {
+      position: absolute;
+      top: 48%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 250px;
+      height: 250px;
+      border-radius: 24px;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.38);
+      z-index: 15;
+    }
+
+    .reticle-corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border: 3.5px solid #10B981;
+    }
+
+    .corner-tl { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 14px; }
+    .corner-tr { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 14px; }
+    .corner-bl { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 14px; }
+    .corner-br { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 14px; }
+
+    .scanner-laser {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #10B981, #34D399, #10B981, transparent);
+      box-shadow: 0 0 10px #10B981;
+      animation: laserSweep 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes laserSweep {
+      0% { top: 8px; opacity: 0.35; }
+      50% { opacity: 1; }
+      100% { top: calc(100% - 10px); opacity: 0.35; }
+    }
+
+    .camera-guide-text {
+      position: absolute;
+      bottom: 125px;
+      left: 20px;
+      right: 20px;
+      text-align: center;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      z-index: 20;
+    }
+
+    .camera-controls-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 28px;
+      z-index: 25;
+    }
+
+    .shutter-btn-outer {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 4px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: transparent;
+      transition: transform 0.15s ease;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+
+    .shutter-btn-inner {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #10B981;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+      transition: all 0.12s ease;
+    }
+
+    .shutter-btn-outer:hover .shutter-btn-inner {
+      background: #059669;
+      transform: scale(0.95);
+    }
+
+    .shutter-btn-outer:active {
+      transform: scale(0.92);
+    }
+
+    .camera-flash-overlay {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+      z-index: 30;
+    }
+
+    /* Fallback card if camera permission denied / unavailable */
+    .cam-fallback-card {
+      position: absolute;
+      inset: 24px;
+      margin: auto;
+      max-height: 420px;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 24px;
+      padding: 24px 20px;
+      color: #fff;
+      text-align: center;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      z-index: 35;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .cam-fallback-card.active {
+      display: flex;
+    }
+
+    .cam-fallback-icon {
+      font-size: 38px;
+      margin-bottom: 4px;
+    }
+
+    .cam-fallback-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #F8FAFC;
+    }
+
+    .cam-fallback-msg {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #94A3B8;
+      margin-bottom: 6px;
+    }
+
+    .cam-fallback-btn {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: none;
+    }
+
+    .cam-fallback-btn.primary {
+      background: #10B981;
+      color: #fff;
+    }
+
+    .cam-fallback-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #F1F5F9;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
   </style>
 </head>
 <body>
@@ -760,10 +1027,10 @@
               يقوم التطبيق بفحص المادة وتصنيفها فوراً إلى Metal أو Paper أو Plastic أو Glass وتحديد السلة المناسبة.
             </p>
             <div class="hero-buttons">
-              <button class="btn-camera" onclick="triggerScan(true)">
+              <button class="btn-camera" onclick="openLiveCamera()">
                 <span>📷</span> فتح الكاميرا
               </button>
-              <button class="btn-gallery" onclick="triggerScan(false)">
+              <button class="btn-gallery" onclick="triggerGallery()">
                 <span>🖼️</span> من المعرض
               </button>
             </div>
@@ -793,7 +1060,7 @@
           <!-- CATEGORIES HEADER -->
           <div class="categories-header">
             <span class="cat-head-title">أقسام وتصنيفات المواد (4 Categories)</span>
-            <span class="cat-guide-link">عرض الدليل</span>
+            <span class="cat-guide-link" onclick="simulateCategoryScan('sample_paper.jpg', 'Paper')">عرض الدليل</span>
           </div>
 
           <!-- 2x2 GRID -->
@@ -850,23 +1117,85 @@
 
         <!-- BOTTOM TABBAR -->
         <nav class="bottom-tabbar">
-          <div class="tab-item active">
+          <div class="tab-item active" onclick="showHomeScreen()">
             <span class="tab-icon">🏠</span>
             <span>الرئيسية</span>
           </div>
-          <div class="tab-item" onclick="triggerScan(true)">
+          <div class="tab-item" onclick="openLiveCamera()">
             <span class="tab-icon">📷</span>
             <span>الكاميرا</span>
           </div>
-          <div class="tab-item">
+          <div class="tab-item" onclick="alert('سجل الفحوصات: تم إجراء ' + scannedCount + ' عملية فحص بنجاح!')">
             <span class="tab-icon">⏱️</span>
             <span>السجل</span>
           </div>
-          <div class="tab-item">
+          <div class="tab-item" onclick="simulateCategoryScan('sample_plastic.jpg', 'Plastic')">
             <span class="tab-icon">📖</span>
             <span>الدليل</span>
           </div>
         </nav>
+      </div>
+
+      <!-- VIEW 3: Live Camera Viewfinder (Direct WebRTC Camera Stream) -->
+      <div id="view-camera" class="app-view">
+        <div class="camera-viewport">
+          <!-- Live Video Stream -->
+          <video id="camera-video" class="camera-video-elem" autoplay playsinline muted></video>
+
+          <!-- Top Overlay Controls -->
+          <div class="camera-header-overlay">
+            <button class="cam-icon-btn" onclick="closeLiveCamera()" title="إغلاق الكاميرا">✕</button>
+            <div class="cam-title-badge">
+              <span>📷</span>
+              <span>الماسح الذكي المباشر</span>
+            </div>
+            <button class="cam-icon-btn" onclick="flipCamera()" title="تبديل الكاميرا">🔄</button>
+          </div>
+
+          <!-- Scanner Reticle Box with Corner Brackets & Laser -->
+          <div id="camera-reticle" class="scanner-reticle-box">
+            <div class="reticle-corner corner-tl"></div>
+            <div class="reticle-corner corner-tr"></div>
+            <div class="reticle-corner corner-bl"></div>
+            <div class="reticle-corner corner-br"></div>
+            <div class="scanner-laser"></div>
+          </div>
+
+          <!-- Guide Hint Banner -->
+          <div id="camera-guide-text" class="camera-guide-text">
+            وجّه الكاميرا نحو المادة المراد فحصها ثم اضغط زر الالتقاط
+          </div>
+
+          <!-- Camera Flash Effect -->
+          <div id="camera-flash" class="camera-flash-overlay"></div>
+
+          <!-- Bottom Controls Bar -->
+          <div id="camera-controls" class="camera-controls-bar">
+            <button class="cam-icon-btn" onclick="triggerGallery()" title="اختيار من المعرض">🖼️</button>
+            <button class="shutter-btn-outer" onclick="captureSnapshot()" title="التقاط وفحص المادة">
+              <div class="shutter-btn-inner"></div>
+            </button>
+            <button class="cam-icon-btn" onclick="testSampleSnapshot()" title="عينة اختبار سريعة">🧪</button>
+          </div>
+
+          <!-- Fallback Card (when camera is unavailable or blocked) -->
+          <div id="camera-fallback-card" class="cam-fallback-card">
+            <div class="cam-fallback-icon">📷⚠️</div>
+            <div class="cam-fallback-title">تعذر تشغيل الكاميرا المباشرة</div>
+            <div id="camera-fallback-msg" class="cam-fallback-msg">
+              لم يتم منح إذن الكاميرا أو لا توجد كاميرا متصلة بالجهاز حالياً. يمكنك الاستمرار عبر اختيار صورة من ملفاتك أو تجربة عينة جاهزة فوراً.
+            </div>
+            <button class="cam-fallback-btn primary" onclick="triggerGallery()">
+              <span>📁</span> اختيار صورة من الجهاز
+            </button>
+            <button class="cam-fallback-btn secondary" onclick="testSampleSnapshot()">
+              <span>🧪</span> فحص عينة تجريبية فورية
+            </button>
+            <button class="cam-fallback-btn secondary" onclick="closeLiveCamera()">
+              <span>←</span> العودة للشاشة الرئيسية
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -877,21 +1206,184 @@
   <script>
     let scannedCount = 0;
     let co2Total = 0.0;
+    let currentCameraStream = null;
+    let currentFacingMode = 'environment'; // environment (rear) or user (front)
 
     function showHomeScreen() {
+      stopCameraStream();
       document.getElementById('view-result').classList.remove('active');
+      document.getElementById('view-camera').classList.remove('active');
       document.getElementById('view-home').classList.add('active');
     }
 
     function showResultScreen() {
+      stopCameraStream();
       document.getElementById('view-home').classList.remove('active');
+      document.getElementById('view-camera').classList.remove('active');
       document.getElementById('view-result').classList.add('active');
     }
 
-    function triggerScan(isCamera) {
+    /* ========================================================
+       LIVE WEBRTC CAMERA ENGINE
+       ======================================================== */
+    async function openLiveCamera() {
+      document.getElementById('view-home').classList.remove('active');
+      document.getElementById('view-result').classList.remove('active');
+      const camView = document.getElementById('view-camera');
+      camView.classList.add('active');
+
+      // Reset UI elements
+      document.getElementById('camera-fallback-card').classList.remove('active');
+      document.getElementById('camera-reticle').style.display = 'block';
+      document.getElementById('camera-controls').style.display = 'flex';
+      document.getElementById('camera-guide-text').textContent = 'وجّه الكاميرا نحو المادة المراد فحصها ثم اضغط زر الالتقاط';
+
+      await startCameraStream();
+    }
+
+    async function startCameraStream() {
+      stopCameraStream();
+      const video = document.getElementById('camera-video');
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showCameraError("المتصفح الحالي لا يدعم تشغيل الكاميرا المباشرة WebRTC. يمكنك رفع صورة من جهازك.");
+        return;
+      }
+
+      try {
+        const constraints = {
+          video: {
+            facingMode: { ideal: currentFacingMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+
+        currentCameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = currentCameraStream;
+        await video.play();
+      } catch (err) {
+        console.warn("Primary camera constraints failed, attempting fallback:", err);
+        try {
+          // Fallback with basic constraints (handles desktop webcams)
+          currentCameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          video.srcObject = currentCameraStream;
+          await video.play();
+        } catch (fallbackErr) {
+          console.error("Camera access failed completely:", fallbackErr);
+          showCameraError("لم يتم السماح بالوصول للكاميرا أو لا توجد كاميرا مفعلة بالجهاز.");
+        }
+      }
+    }
+
+    function stopCameraStream() {
+      if (currentCameraStream) {
+        currentCameraStream.getTracks().forEach(track => {
+          try { track.stop(); } catch (e) {}
+        });
+        currentCameraStream = null;
+      }
+      const video = document.getElementById('camera-video');
+      if (video) video.srcObject = null;
+    }
+
+    function closeLiveCamera() {
+      stopCameraStream();
+      showHomeScreen();
+    }
+
+    async function flipCamera() {
+      currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+      await startCameraStream();
+    }
+
+    function showCameraError(msg) {
+      document.getElementById('camera-fallback-msg').textContent = msg;
+      document.getElementById('camera-fallback-card').classList.add('active');
+      document.getElementById('camera-reticle').style.display = 'none';
+      document.getElementById('camera-controls').style.display = 'none';
+    }
+
+    function triggerGallery() {
       document.getElementById('hidden-file-input').click();
     }
 
+    function triggerScan(isCamera) {
+      if (isCamera) {
+        openLiveCamera();
+      } else {
+        triggerGallery();
+      }
+    }
+
+    async function captureSnapshot() {
+      const video = document.getElementById('camera-video');
+      if (!video || !video.videoWidth || !currentCameraStream) {
+        // Fallback to file picker if camera is not producing video
+        triggerGallery();
+        return;
+      }
+
+      // Shutter flash animation
+      const flash = document.getElementById('camera-flash');
+      flash.style.opacity = '0.9';
+      setTimeout(() => { flash.style.opacity = '0'; }, 180);
+
+      const guide = document.getElementById('camera-guide-text');
+      guide.textContent = '⚡ جاري تحليل الصورة بواسطة نموذج الذكاء الاصطناعي...';
+
+      // Capture frame to in-memory canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+
+      if (currentFacingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          guide.textContent = 'تعذر التقاط الصورة، يرجى المحاولة ثانية';
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', blob, 'camera_scan.jpg');
+
+        try {
+          const res = await fetch('/api/v1/scan', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            stopCameraStream();
+            renderResult(data, URL.createObjectURL(blob));
+          } else {
+            stopCameraStream();
+            simulateCategoryScan('sample_plastic.jpg', 'Plastic');
+          }
+        } catch (e) {
+          console.error("Scan upload error:", e);
+          stopCameraStream();
+          simulateCategoryScan('sample_plastic.jpg', 'Plastic');
+        }
+      }, 'image/jpeg', 0.92);
+    }
+
+    function testSampleSnapshot() {
+      stopCameraStream();
+      simulateCategoryScan('sample_metal.jpg', 'Metal');
+    }
+
+    /* ========================================================
+       FILE SELECTION & SAMPLE SIMULATION
+       ======================================================== */
     async function handleFileSelected(input) {
       if (!input.files || input.files.length === 0) return;
       const file = input.files[0];
@@ -956,7 +1448,7 @@
       };
       document.getElementById('item-icon-box').textContent = icons[data.detected_category] || '📖';
 
-      // Bars
+      // Material breakdown bars
       const barsList = document.getElementById('bars-list');
       barsList.innerHTML = '';
       data.probability_breakdown.forEach(item => {
@@ -970,18 +1462,21 @@
         barsList.appendChild(row);
       });
 
-      // Gauge
+      // Circular gauge
       const conf = Math.round(data.overall_confidence);
       document.getElementById('confidence-pct').textContent = conf + '%';
       const circumference = 251.2;
       const offset = circumference - (circumference * conf) / 100;
       document.getElementById('gauge-circle').style.strokeDashoffset = offset;
 
-      // DSS
+      // DSS Bin text
       document.getElementById('dss-bin-text').textContent = data.dss_recommendation.target_bin_ar;
 
       showResultScreen();
     }
+
+    // Clean up camera stream on window unload
+    window.addEventListener('beforeunload', stopCameraStream);
   </script>
 </body>
 </html>

@@ -1,15 +1,27 @@
 """
 Configuration settings for Smart Waste AI & Decision Support System (DSS)
 """
-from pydantic_settings import BaseSettings
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Union
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class SystemSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
     APP_NAME: str = "Smart Waste AI & DSS"
     APP_VERSION: str = "2.0.0"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def parse_debug(cls, v: Any) -> bool:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "debug", "dev", "development")
+        return bool(v)
     
     # Waste categories
     CATEGORIES: List[str] = ["Metal", "Plastic", "Glass", "Paper"]
