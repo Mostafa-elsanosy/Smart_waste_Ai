@@ -92,7 +92,8 @@ def health_check():
 @app.post("/api/waste/classify", response_model=ProcessDepositResponse)
 async def classify_waste_image(
     file: UploadFile = File(...),
-    category_hint: Optional[str] = Form(None)
+    category_hint: Optional[str] = Form(None),
+    source: Optional[str] = Form(None)
 ):
     """
     Classifies uploaded waste image via YOLOv8, executes DSS sorting rules,
@@ -108,7 +109,8 @@ async def classify_waste_image(
         result = await run_in_threadpool(
             waste_service.classify_and_process_image,
             image_bytes,
-            category_hint=category_hint
+            category_hint=category_hint,
+            source=source
         )
         return result
     except HTTPException:
@@ -234,7 +236,8 @@ def mobile_view():
 @app.post("/api/v1/scan", response_model=MobileScanResponse)
 async def mobile_scan_endpoint(
     file: UploadFile = File(...),
-    category_hint: Optional[str] = Form(None)
+    category_hint: Optional[str] = Form(None),
+    source: Optional[str] = Form(None)
 ):
     """
     Core Mobile App Scan Endpoint.
@@ -252,7 +255,8 @@ async def mobile_scan_endpoint(
         result = await run_in_threadpool(
             waste_service.scan_mobile_image,
             image_bytes,
-            category_hint=category_hint
+            category_hint=category_hint,
+            source=source
         )
         return result
     except HTTPException:

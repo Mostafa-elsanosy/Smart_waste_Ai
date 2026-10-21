@@ -1331,19 +1331,38 @@
       setTimeout(() => { flash.style.opacity = '0'; }, 180);
 
       const guide = document.getElementById('camera-guide-text');
-      guide.textContent = '⚡ جاري تحليل الصورة بواسطة نموذج الذكاء الاصطناعي...';
+      guide.textContent = '⚡ جاري المعالجة وتحسين التباين وفحص الذكاء الاصطناعي...';
 
-      // Capture frame to in-memory canvas
+      // Calculate the exact visible frame displayed inside the simulator viewport
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const viewportElem = document.querySelector('.camera-viewport');
+      const viewRect = viewportElem ? viewportElem.getBoundingClientRect() : { width: 370, height: 650 };
+      const viewAspect = viewRect.width / viewRect.height;
+      const vidAspect = vw / vh;
+
+      let sx = 0, sy = 0, sw = vw, sh = vh;
+      if (vidAspect > viewAspect) {
+        // Video is wider than element -> crop side background margins
+        sw = vh * viewAspect;
+        sx = (vw - sw) / 2;
+      } else {
+        // Video is taller -> crop vertical margins
+        sh = vw / viewAspect;
+        sy = (vh - sh) / 2;
+      }
+
+      // Capture frame at high native resolution
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = Math.round(sw);
+      canvas.height = Math.round(sh);
       const ctx = canvas.getContext('2d');
 
       if (currentFacingMode === 'user') {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(async (blob) => {
         if (!blob) {
@@ -1353,6 +1372,7 @@
 
         const formData = new FormData();
         formData.append('file', blob, 'camera_scan.jpg');
+        formData.append('source', 'live_camera');
 
         try {
           const res = await fetch('/api/v1/scan', {
@@ -1373,7 +1393,7 @@
           stopCameraStream();
           simulateCategoryScan('sample_plastic.jpg', 'Plastic');
         }
-      }, 'image/jpeg', 0.92);
+      }, 'image/jpeg', 0.95);
     }
 
     function testSampleSnapshot() {
@@ -1389,6 +1409,7 @@
       const file = input.files[0];
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('source', 'gallery');
 
       try {
         const res = await fetch('/api/v1/scan', {

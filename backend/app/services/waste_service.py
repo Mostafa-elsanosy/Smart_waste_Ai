@@ -48,7 +48,8 @@ class SmartWasteService:
     def classify_and_process_image(
         self,
         image_bytes: bytes,
-        category_hint: Optional[str] = None
+        category_hint: Optional[str] = None,
+        source: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Full end-to-end processing pipeline:
@@ -59,7 +60,11 @@ class SmartWasteService:
         """
         # 1. YOLO Inference
         image = Image.open(io.BytesIO(image_bytes))
-        detection_result: DetectionResult = self.detector.detect_image(image, requested_hint=category_hint)
+        detection_result: DetectionResult = self.detector.detect_image(
+            image,
+            requested_hint=category_hint,
+            source=source
+        )
 
         sorting_decisions = []
         updated_containers = []
@@ -215,7 +220,8 @@ class SmartWasteService:
     def scan_mobile_image(
         self,
         image_bytes: bytes,
-        category_hint: Optional[str] = None
+        category_hint: Optional[str] = None,
+        source: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Specialized endpoint for Mobile Smart Waste AI Scanner.
@@ -223,7 +229,11 @@ class SmartWasteService:
         and DSS target bin recommendation matching the mobile UI design.
         """
         image = Image.open(io.BytesIO(image_bytes))
-        det_result = self.detector.detect_image(image, requested_hint=category_hint)
+        det_result = self.detector.detect_image(
+            image,
+            requested_hint=category_hint,
+            source=source
+        )
 
         primary_cat = det_result.primary_category
         if category_hint and category_hint in ["Metal", "Plastic", "Glass", "Paper"]:

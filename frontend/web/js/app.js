@@ -120,6 +120,7 @@ function setupSamplePicker() {
 async function uploadAndClassifyFile(file, categoryHint = null) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("source", "gallery");
   if (categoryHint) {
     formData.append("category_hint", categoryHint);
   }
